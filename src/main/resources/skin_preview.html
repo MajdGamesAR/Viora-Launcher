@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viora Launcher - 3D Skin Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0F0F18;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #FFFFFF;
+        }
+
+        #container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+        }
+
+        #loading .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #FF6B00;
+            border-top: 4px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #status {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            color: #69F0AE;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 6px 12px;
+            border-radius: 6px;
+            z-index: 100;
+        }
+
+        #error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #FF6B6B;
+            font-size: 14px;
+            text-align: center;
+            z-index: 100;
+            max-width: 90%;
+            background: rgba(255, 107, 107, 0.1);
+            padding: 16px 24px;
+            border-radius: 8px;
+            border: 1px solid #FF6B6B;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #9A9AAE;
+            font-size: 12px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/skinview3d@3.0.0/bundles/skinview3d.bundle.js"></script>
+</head>
+<body>
+<div id="container">
+    <div id="loading">
+        <div class="spinner"></div>
+        <div>Loading 3D Viewer...</div>
+    </div>
+    <div id="status">Initializing...</div>
+    <div id="error" style="display: none;"></div>
+    <div id="controls" style="display: none;">
+        🖱️ Drag to rotate • Scroll to zoom
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    //  VARIABLES
+    // ============================================================
+    const container = document.getElementById('container');
+    const loadingEl = document.getElementById('loading');
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
+    const controlsEl = document.getElementById('controls');
+
+    let viewer = null;
+
+    // ============================================================
+    //  ERROR HANDLER
+    // ============================================================
+    function showError(message) {
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.innerHTML = '❌ ' + message;
+        statusEl.innerHTML = '❌ Failed';
+        statusEl.style.color = '#FF6B6B';
+        console.error('Error:', message);
+    }
+
+    // ============================================================
+    //  INIT VIEWER
+    // ============================================================
+    function initViewer() {
+        try {
+            statusEl.innerHTML = '✅ skinview3d loaded';
+
+            // ✅ إنشاء Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // ✅ إنشاء Viewer
+            viewer = new skinview3d.SkinViewer({
+                canvas: canvas,
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+
+            // ✅ إعدادات الكاميرا
+            viewer.camera.position.set(20, 15, 35);
+            viewer.camera.lookAt(0, 5, 0);
+
+            // ✅ إعدادات الإضاءة
+            viewer.globalLight.intensity = 0.7;
+            viewer.cameraLight.intensity = 0.4;
+
+            // ✅ إعدادات التحكم
+            viewer.controls.enableRotate = true;
+            viewer.controls.enableZoom = true;
+            viewer.controls.enablePan = false;
+            viewer.controls.target.set(0, 5, 0);
+
+            // ✅ إضافة Canvas إلى الصفحة
+            container.appendChild(canvas);
+
+            // ✅ إخفاء شاشة التحميل
+            loadingEl.style.display = 'none';
+            controlsEl.style.display = 'block';
+            statusEl.innerHTML = '✅ Viewer ready';
+
+            console.log('✅ Viewer initialized successfully');
+
+            return viewer;
+
+        } catch (e) {
+            showError('Init error: ' + e.message);
+            return null;
+        }
+    }
+
+    // ============================================================
+    //  LOAD SKIN
+    // ============================================================
+    async function loadSkin(skinUrl) {
+        if (!viewer) {
+            showError('Viewer not initialized');
+            return;
+        }
+
+        try {
+            statusEl.innerHTML = '⏳ Loading skin...';
+            statusEl.style.color = '#69F0AE';
+            console.log('Loading skin:', skinUrl);
+
+            // ✅ حاول التحميل مباشرة
+            await viewer.loadSkin(skinUrl, { model: 'auto-detect' });
+
+            statusEl.innerHTML = '✅ Skin loaded';
+            console.log('✅ Skin loaded successfully');
+
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 2000);
+
+        } catch (err) {
+            console.error('❌ Failed to load skin directly:', err);
+
+            // ✅ المحاولة الثانية: عبر proxy (allorigins)
+            try {
+                statusEl.innerHTML = '⏳ Retrying with proxy...';
+                console.log('Trying CORS proxy...');
+
+                const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(skinUrl);
+                await viewer.loadSkin(proxyUrl, { model: 'auto-detect' });
+
+                statusEl.innerHTML = '✅ Skin loaded (via proxy)';
+                console.log('✅ Skin loaded via proxy');
+
+            } catch (err2) {
+                console.error('❌ Proxy also failed:', err2);
+                showError('Failed to load skin. URL: ' + skinUrl);
+            }
+        }
+    }
+
+    // ============================================================
+    //  LOAD DEFAULT SKIN
+    // ============================================================
+    function loadDefaultSkin() {
+        loadSkin('https://mc-heads.net/skin/MHF_Steve');
+    }
+
+    // ============================================================
+    //  RESIZE HANDLER
+    // ============================================================
+    window.addEventListener('resize', () => {
+        if (viewer) {
+            const canvas = viewer.canvas;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            viewer.setSize(window.innerWidth, window.innerHeight);
+        }
+    });
+
+    // ============================================================
+    //  MESSAGE LISTENER (من Kotlin)
+    // ============================================================
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.action === 'loadSkin') {
+            loadSkin(event.data.url);
+        }
+    });
+
+    // ============================================================
+    //  ✅ START — اقرأ skin URL من query parameter
+    // ============================================================
+    window.onload = function() {
+        console.log('📄 HTML loaded');
+
+        // ✅ اقرأ skin URL من URL parameter
+        const params = new URLSearchParams(window.location.search);
+        const skinUrl = params.get('skin') || 'https://mc-heads.net/skin/MHF_Steve';
+        console.log('🎨 Skin URL from param:', skinUrl);
+
+        // ✅ تحقق من skinview3d
+        if (typeof skinview3d === 'undefined') {
+            showError('skinview3d library not loaded. Check your internet connection.');
+            return;
+        }
+
+        // ✅ ابدأ التهيئة
+        setTimeout(() => {
+            const v = initViewer();
+            if (v) {
+                // ✅ حمّل السكن من URL parameter
+                loadSkin(skinUrl);
+            }
+        }, 300);
+    };
+</script>
+</body>
+</html>
